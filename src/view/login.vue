@@ -1,7 +1,8 @@
 <template>
     <div class="login-container">
-        <span class="no-sel fs-18">Welcome to Zaun!</span>
+        <span class="no-sel fs-18">Welcome to Piltover!</span>
         <input autofocus type="text" v-model="admin" @keyup.enter="adminLogin">
+        <img class="role" src="../assets/img/51011.png">
     </div>
 </template>
 
@@ -57,6 +58,12 @@ export default defineComponent({
         margin-top: 20px;
         margin-bottom: 100px;
         text-align: center;
+    }
+    .role {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-133%, -82%);
     }
 }
 </style>

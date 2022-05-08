@@ -2,21 +2,15 @@
     font-family: Monaco;
     src: url(src/assets/font/MONACO.TTF);
 }
-@font-face {
-    font-family: SanFrancisco;
-    src: url(src/assets/font/SanFranciscoDisplay-Regular.otf);
-}
-@font-face {
-    font-family: SanFrancisco Bold;
-    src: url(src/assets/font/SanFranciscoDisplay-Bold.otf);
-}
+
+.bold { font-weight: bold; }
 
 * {
     box-sizing: border-box;
 }
 
 html, body {
-    font-family: SanFrancisco;
+    font-family: Monaco;
     width: 100%;
     height: 100%;
     min-width: 1200px;
@@ -32,6 +26,9 @@ html, body {
 
 .txt-center { text-align: center; }
 
+.h-100p { height: 100%; }
+.w-100p { width: 100%; }
+
 $h: 5;
 @while $h < 60 {
     .h-#{$h} {
@@ -44,7 +41,7 @@ $pd: 10;
     .pd-#{$pd} {
         padding: #{$pd}px;
     }
-    $pd: $pd + 10
+    $pd: $pd + 5
 }
 $pdl: 10;
 @while $pdl < 60 {
@@ -67,6 +64,20 @@ $mgb: 5;
     }
     $mgb: $mgb + 5
 }
+$mgr: 5;
+@while $mgr < 60 {
+    .mgr-#{$mgr} {
+        margin-right: #{$mgr}px;
+    }
+    $mgr: $mgr + 5
+}
+$mgl: 5;
+@while $mgl < 60 {
+    .mgl-#{$mgl} {
+        margin-left: #{$mgl}px;
+    }
+    $mgl: $mgl + 5
+}
 $fs: 10;
 @while $fs < 25 {
     .fs-#{$fs} {
@@ -75,11 +86,8 @@ $fs: 10;
     $fs: $fs + 1
 }
 
-.bold { font-family: SanFrancisco Bold; }
-.normal { font-family: SanFrancisco; }
-
 input {
-    font-family: SanFrancisco;
+    font-family: Monaco;
     width: 300px;
     height: 20px;
     padding: 6px 5px;
@@ -97,6 +105,15 @@ input {
         outline: 0;
         box-shadow: 0 0 0 0.2rem rgb(0 123 255 / 25%);
     }
+}
+
+textarea {
+    padding: 15px;
+    border: none;
+    &:focus {
+        outline: none;
+    }
+    font-family: Monaco;
 }
 
 // 按钮

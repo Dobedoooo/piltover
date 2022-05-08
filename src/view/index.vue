@@ -1,8 +1,13 @@
 <template>
     <div class="index-container">
-        <div class="pdl-20 bar bold fs-18">
-            <span>{{ state.activeItem }}</span>
-            <div class="fr cur pdr-20" @click="refresh">☁️</div>
+        <div class="pdl-20 bar fs-18 no-sel">
+            <span class="bold">{{ state.activeItem }}</span>
+            <div class="fr cur mgr-20 mgl-10 refresh" @click="refresh">☁️</div>
+            <div class="fr fs-16" v-if="Object.keys(state.file).length">
+                <span v-if="state.activeFile && Object.keys(state.file[state.activeFile]).length">
+                    create time:{{ state.file[state.activeFile].birthtime.split('T')[0] }}
+                </span>
+            </div>
         </div>
         <div class="content">
             <div class="top">
@@ -27,29 +32,51 @@
                         <div :class="['item', 'cur',
                             state.activeFile === fileIndex ? 'active' : '',
                             state.activeItem === fileIndex ? 'panel-active' : ''
-                        ]" v-for="(fileItem, fileIndex) in state.file" :key="fileIndex">
-                            <span class="cur no-sel" @click="getFile(fileIndex as string)"><span class="icon">{{ String(fileIndex).split('.')[1] === 'json' ? '📄' : '🖼️' }}</span>{{ fileIndex }}</span>
+                        ]" v-for="(fileItem, fileIndex) in state.file" :key="fileIndex" @click="getPreview(fileIndex as string)">
+                            <span class="cur no-sel"><span class="icon">{{ String(fileIndex).split('.')[1] === 'json' ? '📄' : '🖼️' }}</span>{{ fileIndex }}</span>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="preview"></div>
+            <div class="preview">
+                <div v-if="previewState.previewType === 'json'" class="h-100p">
+                    <VAceEditor 
+                        v-model:value="(previewState.previewFile as string)"
+                        style="height: 100%;"
+                        lang="json"
+                        theme="eclipse"
+                        :readonly="true"
+                        :wrap="true"
+                        @change="editorInit"
+                    ></VAceEditor>
+                </div>
+                <div v-else class="img">
+                    <img :src="(previewState.previewFile as string)">
+                </div>
+            </div>
         </div>
     </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, onMounted, reactive } from "vue";
+import { defineComponent, inject, onMounted, reactive } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import {
     getFileList,
     Universal,
-    refresh as fileRefresh
+    refresh as fileRefresh,
+    getFile,
+    Preview
 } from '../api'
+
+import { VAceEditor } from 'vue3-ace-editor'
+import 'ace-builds/src-noconflict/mode-json'
+import 'ace-builds/src-noconflict/theme-eclipse'
 
 export default defineComponent({
     name: 'index',
+    components: { VAceEditor },
     setup() {
 
         const state = reactive({
@@ -61,9 +88,13 @@ export default defineComponent({
             file: {} as Universal,
             activeFile: '',
             activeItem: '',
+            
         })
         const route = useRoute()
         const router = useRouter()
+        
+        const loading: any = inject('loading')
+        const idle: any = inject('idle')
 
         const init = async(): Promise<void> => {
             
@@ -72,13 +103,15 @@ export default defineComponent({
                 return
             }
 
+            loading()
             const res = await getFileList(route.params?.token as string)
+            idle()
             if(res.ok) {
                 state.directory = res.data
             } else {
                 console.error('error')
             }
-            
+
         }
         onMounted(init)
 
@@ -87,6 +120,8 @@ export default defineComponent({
             state.activeItem = path
             state.activeSub = ''
             state.activeFile = ''
+            previewState.previewFile = ''
+            previewState.previewType = ''
             state.sub = state.directory[path]
             state.file = {}        
         }
@@ -94,27 +129,47 @@ export default defineComponent({
             state.activeSub = sub
             state.activeItem = sub
             state.activeFile = ''
+            previewState.previewFile = ''
+            previewState.previewType = ''
             state.file = state.directory[state.activeTop][sub]
         }
         const openDir = (path: string, subPath = false) => {
             subPath ? doSub(path) : doPath(path)
         }
-        const getFile = (file: string) => {
+
+        const previewState = reactive({
+            previewType: '',
+            previewFile: '' as object | string,
+        })
+        const getPreview = async(file: string) => {
+            if(state.activeFile === file) return
             state.activeFile = file
             state.activeItem = file
+            loading()
+            const preview: Preview = await getFile(state.activeTop, state.activeSub, state.activeFile)
+            idle()
+            previewState.previewType = preview.type
+            previewState.previewFile = preview.type === 'json' ? JSON.stringify(preview.data, null, 4) : preview.data
+        }
+        const editorInit = (stat: any, editor: any) => {
+            stat.action === 'insert' &&  editor.scrollToRow(0)
         }
         
         const refresh = async() => {
+            loading()
             const res = await fileRefresh(route.params?.token as string)
-            console.log(res);
+            idle()
+            console.log(res);   
             
         }
 
         return {
             state,
             openDir,
-            getFile,
+            getPreview,
             refresh,
+            previewState,
+            editorInit
         }
 
     }
@@ -125,8 +180,8 @@ export default defineComponent({
 .index-container {
     width: 83%;
     height: 83%;
-    // border: 1px solid cadetblue;
     border-radius: 12px;
+    overflow: hidden;
     box-shadow: 2px 4px 12px rgb(0 0 0 / 8%);
     background-color: #fff;
     .icon {
@@ -144,6 +199,12 @@ export default defineComponent({
         border-bottom: 1px solid #eeeaef;
         border-top-left-radius: 12px;
         border-top-right-radius: 12px;
+        .refresh {
+            transition: text-shadow .15s;
+            &:hover {
+                text-shadow: 0 0 5px rgba($color: #333, $alpha: .5);
+            }
+        }
     }
     .content {
         height: calc(100% - 50px);
@@ -176,7 +237,7 @@ export default defineComponent({
             height: 100%;
             display: flex;
             justify-content: flex-start;
-            border-left: 2px solid #eeeeee;
+            border-left: 1px solid #eeeeee;
             .sub-dir {
                 width: 200px;
                 height: 100%;
@@ -185,13 +246,36 @@ export default defineComponent({
                 overflow: auto;
                 width: 200px;
                 height: 100%;
-                border-left: 2px solid #eeeeee;
-                border-right: 2px solid #eeeeee;
+                border-left: 1px solid #eeeeee;
+                border-right: 1px solid #eeeeee;
             }
         }
     }
     .preview {
         width: calc(100% - 600px);
+        .img {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+        }
+        .json-preview {
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            &:focus {
+                outline: none;
+            }
+        }
+        
+        :deep(.ace_gutter) {
+            background-color: #fbfbfb !important;
+            .ace_gutter-active-line {
+                background-color: #dbdbdb !important;
+            }
+        }
     }
 }
+
 </style>
